@@ -12,11 +12,13 @@ import java.net.InetSocketAddress;
 
 public class EchoServer {
     private final int port;
+
     public EchoServer(int port) {
         this.port = port;
     }
 
-    public void start() throws Exception{
+    public void start() throws Exception {
+        final EchoServerHandler serverHandler = new EchoServerHandler();
         EventLoopGroup group = new NioEventLoopGroup();
         try {
             ServerBootstrap b = new ServerBootstrap();
@@ -24,20 +26,26 @@ public class EchoServer {
                     .channel(NioServerSocketChannel.class)
                     .localAddress(new InetSocketAddress(port))
                     .childHandler(new ChannelInitializer<SocketChannel>() {
-                        protected void initChannel(SocketChannel socketChannel) throws Exception {
-                            socketChannel.pipeline().addLast(new EchoServerHandler());
+                        @Override
+                        public void initChannel(SocketChannel ch)
+                                throws Exception {
+                            ch.pipeline().addLast(serverHandler);
                         }
                     });
+//                    .childHandler(new ChannelInitializer<SocketChannel>() {
+//                        protected void initChannel(SocketChannel socketChannel) throws Exception {
+//                            socketChannel.pipeline().addLast(new EchoServerHandler());
+//                        }
+//                    });
             ChannelFuture f = b.bind().sync();
             System.out.println(EchoServer.class.getName() + " started and listen on " + f.channel().localAddress());
             f.channel().closeFuture().sync();
-        }
-        finally {
+        } finally {
             group.shutdownGracefully().sync();
         }
     }
 
-    public static void main(String[] args) throws Exception{
+    public static void main(String[] args) throws Exception {
         if (args.length != 1) {
             System.err.println("Usage: " + EchoServer.class.getSimpleName() + " <port>");
         }
